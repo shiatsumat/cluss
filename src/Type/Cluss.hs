@@ -3,68 +3,199 @@
 module Type.Cluss (
     -- * Clusses
     In(..)
+
     -- * Type Patterns
-  , Type, Unary, Binary, Ternary, Quaternary, Quinary, Senary, type (<|)
+    {-| "Type patterns" are used in the type list (first parameter) of 'In'.
+        Each type pattern corresponds to the head of an instance declaration for a type class, namely, @instance ... where@. -}
+  , Type, type (<|), Unary, Binary, Ternary, Quaternary, Quinary, Senary
+
     -- * Instance Products
   , AllOf, AllOf'(..)
-    -- * Constraints
-    -- ** Basic Constraints
+
+    -- * Constraint Combinators
+    {-| "Constraint combinators" are used in the second parameter of '<|', 'Unary', 'Binary', ..., 'Senary'.
+        Note that each combinator has a kind polymorphism. -}
+
+    -- ** Basic Combinators
   , This, Pure, Is
-    -- ** Overlaying Contraints
+
+    -- ** Combinators for Overlaying Contraints
   , type (>+<), type (>++<), type (>+++<), type (>++++<), type (>+++++<), type (>++++++<)
-    -- ** Bonding Contraints
+
+    -- ** Combinators for Bonding Contraints
   , type (>|<), type (>||<), type (>|||<), type (>||||<), type (>|||||<)
+
     -- * Helpers
-    -- ** For Identical Constructors
-  , and, andI, and1, and2, and3, and4, and5, and6, none, projI
-    -- ** For Function Constructors
-  , andF, andF1, andF2, andF3, andF4, andF5, andF6, noneF, projF
+
+    -- ** Helpers for Identical Constructors
+  , AllOfI, AllOfI', andI, andI1, andI2, andI3, andI4, andI5, andI6, noneI, projI
+
+    -- ** Helpers for Function Constructors
+  , AllOfF, AllOfF', andF, andF1, andF2, andF3, andF4, andF5, andF6, noneF, projF
+
+    -- * Examples
+
+    -- ** Example1: Hello
+    -- $hello
+
+    -- ** Example2: Printf
+    -- $printf
+
+    -- ** Example3: Monad
+    -- $monad
+
     ) where
 
 import Prelude hiding (and)
 import GHC.Exts
 
+-- $hello
+-- >type Hellos = [
+-- >    Type String,
+-- >    Type Int,
+-- >    Type Double,
+-- >    Unary [] Show,
+-- >    Quaternary (,,,) (This >|< This >||< This >|||< This)]
+-- >hello :: In Hellos a => a -> String
+-- >hello = projF (
+-- >    (\s -> "hello, " ++ s) `andF`
+-- >    (\n -> "Mr. " ++ show n) `andF`
+-- >    (\x -> show (x / 2) ++ " times two") `andF`
+-- >    (\xs -> concatMap ((++", ") . show) xs ++ "period") `andF1`
+-- >    (\(x,y,z,w) ->
+-- >        hello x ++ " and " ++ hello y ++ " and " ++
+-- >        hello z ++ " and " ++ hello w) `andF4`
+-- >    noneF :: AllOfF Hellos String)
+-- >
+-- >main = putStrLn $
+-- >    hello ("world", 42 :: Int, 3.14 :: Double, [True, False])
+--
+-- And this is the result.
+--
+-- > hello, world and Mr. 42 and 1.57 times two and True, False, period
+
+-- $printf
+-- >type Printfs = [Binary (->) (Show >|< This), Type String]
+-- >printf :: In Printfs a => String -> a
+-- >printf s = projI (
+-- >    (\x -> printf (go s (show x))) `andI2`
+-- >    s `andI`
+-- >    noneI :: AllOfI Printfs)
+-- >  where
+-- >    go ('@' : cs) t = t ++ cs
+-- >    go (c : cs) t = c : go cs t
+-- >    go [] t = error "there is no '@' any more!"
+-- >
+-- >main = putStrLn $
+-- >    printf "@ good @ and @" 12 "men" True
+--
+-- And this is the result.
+--
+-- >12 good "men" and True
+
+-- $monad
+
 data Look_At_Head
 data Look_At_Tail a
 data No_I_Don't_Have_That
 
+-- | The empty type @Type a@ is a type pattern.
+-- For example, the type pattern @Type Int@ corresponds to @instance C Int where ...@ (@C@ is a type class).
+-- Note that the type variable @a@ can take any kind.
 data Type (a :: k)
+-- | The empty type @a <| p@ is a type pattern,
+-- where @a@ is a type constructor, and @p@ is a constraint function for the variables of 'a'.
+-- For example, the type pattern @[] <| Show@ corresponds to @instance (Show a) => C [a] where ...@ (@C@ is a type class).
+--
+-- You can replace any of 'Unary', 'Binary', ..., 'Senary' with '<|',
+-- but you can sometimes save the effort of annotating kinds
+-- using 'Unary', 'Binary', ..., 'Senary' instead of '<|',
+-- especially when using the @PolyKinds@ extension,
+-- because kinds of parameters are restricted in 'Unary', 'Binary', ..., 'Senary'.
 data (a :: k) <| (p :: l)
-type Unary (a :: i -> k) (s :: i -> Constraint) = a <| s
-type Binary (a :: i -> i' -> k) (s :: i -> i' -> Constraint) = a <| s
-type Ternary (a :: i -> i' -> k) (s :: i -> i' -> i'' -> Constraint) = a <| s
-type Quaternary (a :: i -> i' -> i'' -> i''' -> k) (s :: i -> i' -> i'' -> i''' -> Constraint) = a <| s
-type Quinary (a :: i -> i' -> i'' -> i''' -> i'''' -> k) (s :: i -> i' -> i'' -> i''' -> i'''' -> Constraint) = a <| s
-type Senary (a :: i -> i' -> i'' -> i''' -> i'''' -> i''''' -> k) (s :: i -> i' -> i'' -> i''' -> i'''' -> i''''' -> Constraint) = a <| s
+-- | @a '<|' p@, with @a@ being of the kind @i -> k@ and @p@, @i -> 'Constraint'@.
+type Unary (a :: i -> k) (p :: i -> Constraint) = a <| p
+-- | @a '<|' p@, with @a@ being of the kind @i -> i' -> k@ and @p@, @i -> i' -> 'Constraint'@.
+type Binary (a :: i -> i' -> k) (p :: i -> i' -> Constraint) = a <| p
+-- | @a '<|' p@, with @a@ being of the kind @i -> i' -> i'' -> k@ and @p@, @i -> i' -> i'' -> 'Constraint'@.
+type Ternary (a :: i -> i' -> k) (p :: i -> i' -> i'' -> Constraint) = a <| p
+-- | @a '<|' p@, with @a@ being of the kind @i -> i' -> i'' -> i''' -> k@ and @p@, @i -> i' -> i'' -> i''' -> 'Constraint'@.
+type Quaternary (a :: i -> i' -> i'' -> i''' -> k) (p :: i -> i' -> i'' -> i''' -> Constraint) = a <| p
+-- | @a '<|' p@, with @a@ being of the kind @i -> i' -> i'' -> i''' -> i'''' -> k@ and @p@, @i -> i' -> i'' -> i''' -> i'''' -> 'Constraint'@.
+type Quinary (a :: i -> i' -> i'' -> i''' -> i'''' -> k) (p :: i -> i' -> i'' -> i''' -> i'''' -> Constraint) = a <| p
+-- | @a '<|' p@, with @a@ being of the kind @i -> i' -> i'' -> i''' -> i'''' -> i''''' -> k@ and @p@, @i -> i' -> i'' -> i''' -> i'''' -> i''''' -> 'Constraint'@.
+type Senary (a :: i -> i' -> i'' -> i''' -> i'''' -> i''''' -> k) (p :: i -> i' -> i'' -> i''' -> i'''' -> i''''' -> Constraint) = a <| p
 
--- |'This' is used to create a recursion.
---  When used in the type list (the second parameter) of 'In', with @'>+<', '>++<', ... '>|<', '>||<', ...@, 'This' will work as the @`In` as@ itself.
---  There is basically no limit of recursion depth, but GHC has a fixed-depth recursion stack for safety, so you may need to increase the stack depth with @-fcontext-stack=N@.
+-- | 'This' creates a recursion.
+-- In other words, 'This' will work as @'In' as@ itself
+-- when used in the type list (first parameter) of 'In',
+-- combined with 'Type', '<|', 'Unary', 'Binary', ..., 'Senary',
+-- '>+<', '>++<', ..., '>++++++<',
+-- '>|<', '>||<', ..., '>|||||<'.
+--
+-- Note that 'This' won't be expanded into @'In' as@
+-- if the condition described above is not satisfied.
+-- Internally, the expansion is executed by 'Modify', 'Modify2', ..., 'Modify6'.
+--
+-- For your information, the instance of 'This' itself can't be created
+-- since the context @True~False@ will never be satisfied.
+--
+-- There is no predetermined limit of recursion depth,
+-- but GHC has a fixed-depth recursion stack for safety,
+-- so you may need to increase the stack depth with @-fcontext-stack=N@.
 class True ~ False => This (a :: k)
+-- | @'Pure' a@ is equivalent to the empty constraint @()@.
+--
+-- >Pure a == ()
 class Pure (a :: i)
 instance Pure a
-class (s a, s' a) => (>+<) s s' a
-instance (s a, s' a) => (>+<) s s' a
-class (s a b, s' a b) => (>++<) s s' a b
-instance (s a b, s' a b) => (>++<) s s' a b
-class (s a b c, s' a b c) => (>+++<) s s' a b c
-instance (s a b c, s' a b c) => (>+++<) s s' a b c
-class (s a b c d, s' a b c d) => (>++++<) s s' a b c d
-instance (s a b c d, s' a b c d) => (>++++<) s s' a b c d
-class (s a b c d e, s' a b c d e) => (>+++++<) s s' a b c d e
-instance (s a b c d e, s' a b c d e) => (>+++++<) s s' a b c d e
-class (s a b c d e f, s' a b c d e f) => (>++++++<) s s' a b c d e f
-instance (s a b c d e f, s' a b c d e f) => (>++++++<) s s' a b c d e f
-class (s a, s' b) => (>|<) s s' a b
-instance (s a, s' b) => (>|<) s s' a b
-class (s a b, s' c) => (>||<) s s' a b c
-instance (s a b, s' c) => (>||<) s s' a b c
-class (s a b c, s' d) => (>|||<) s s' a b c d
-instance (s a b c, s' d) => (>|||<) s s' a b c d
-class (s a b c d, s' e) => (>||||<) s s' a b c d e
-instance (s a b c d, s' e) => (>||||<) s s' a b c d e
-class (s a b c d e, s' f) => (>|||||<) s s' a b c d e f
-instance (s a b c d e, s' f) => (>|||||<) s s' a b c d e f
+-- |
+-- >(p >+< q) a == (p a, q a)
+class (p a, q a) => (>+<) p q a
+instance (p a, q a) => (>+<) p q a
+-- |
+-- >(p >++< q) a b == (p a b, q a b)
+class (p a b, q a b) => (>++<) p q a b
+instance (p a b, q a b) => (>++<) p q a b
+-- |
+-- >(p >+++< q) a b c == (p a b c, q a b c)
+class (p a b c, q a b c) => (>+++<) p q a b c
+instance (p a b c, q a b c) => (>+++<) p q a b c
+-- |
+-- >(p >++++< q) a b c d == (p a b c d, q a b c d)
+class (p a b c d, q a b c d) => (>++++<) p q a b c d
+instance (p a b c d, q a b c d) => (>++++<) p q a b c d
+-- |
+-- >(p >+++++< q) a b c d e == (p a b c d e, q a b c d e)
+class (p a b c d e, q a b c d e) => (>+++++<) p q a b c d e
+instance (p a b c d e, q a b c d e) => (>+++++<) p q a b c d e
+-- |
+-- >(p >++++++< q) a b c d e f == (p a b c d e f, q a b c d e f)
+class (p a b c d e f, q a b c d e f) => (>++++++<) p q a b c d e f
+instance (p a b c d e f, q a b c d e f) => (>++++++<) p q a b c d e f
+-- |
+-- >(p >|< q) a b == (p a, q b)
+class (p a, q b) => (>|<) p q a b
+instance (p a, q b) => (>|<) p q a b
+-- |
+-- >(p >||< q) a b c == (p a b, q c)
+class (p a b, q c) => (>||<) p q a b c
+instance (p a b, q c) => (>||<) p q a b c
+-- |
+-- >(p >|||< q) a b c d == (p a b c, q d)
+class (p a b c, q d) => (>|||<) p q a b c d
+instance (p a b c, q d) => (>|||<) p q a b c d
+-- |
+-- >(p >||||< q) a b c d e == (p a b c d, q e)
+class (p a b c d, q e) => (>||||<) p q a b c d e
+instance (p a b c d, q e) => (>||||<) p q a b c d e
+-- |
+-- >(p >|||||< q) a b c d e f == (p a b c d e, q f)
+class (p a b c d e, q f) => (>|||||<) p q a b c d e f
+instance (p a b c d e, q f) => (>|||||<) p q a b c d e f
+
+-- |
+-- >(Is a) b == (a ~ b)
 type Is = (~)
 
 infixl 7 <|
@@ -120,6 +251,16 @@ data instance AllOf' ts '[] f = None
 
 infixr 0 `And`, `And1`, `And2`, `And3`, `And4`, `And5`, `And6`
 
+-- | @'In' as@ is the /cluss/, where @as@ is a list of type patterns.
+-- Normally, @as@ is concrete and does not containt any type variables.
+--
+-- When @a@ satisfies @In as a@, you can use the method @'proj' :: 'AllOf' as f -> f a@.
+--
+-- You need to use some language extensions, Basically, the language pragma below will do.
+--
+-- >{-# LANGUAGE DataKinds, FlexibleContexts, TypeOperators #-}
+--
+-- Internally, "type pattern matching" is executed by 'Where', a closed type family, which cannot check if a type satisfies a constraint.
 class In (as :: [*]) (a :: k) where
     proj :: AllOf as f -> f a
 instance In' (Where as a) as as a => In as a where
@@ -156,42 +297,47 @@ instance In' n ts as a => In' (Look_At_Tail n) ts ((b :: i -> i' -> i'' -> i''' 
     proj' _ (And6 _ xs) = proj' (undefined :: n) xs
 
 newtype Id a = Id {unId :: a}
-and, andI :: a -> AllOf' ts as Id -> AllOf' ts (Type a ': as) Id
-and x y = And (Id x) y
-andI = and
-and1 :: (forall b. Modify (In ts) p b => a b) -> AllOf' ts as Id -> AllOf' ts (a <| p ': as) Id
-and1 x y = And1 (Id x) y
-and2 :: (forall b c. Modify2 (In ts) p b c => a b c) -> AllOf' ts as Id -> AllOf' ts (a <| p ': as) Id
-and2 x y = And2 (Id x) y
-and3 :: (forall b c d. Modify3 (In ts) p b c d => a b c d) -> AllOf' ts as Id -> AllOf' ts (a <| p ': as) Id
-and3 x y = And3 (Id x) y
-and4 :: (forall b c d e. Modify4 (In ts) p b c d e => a b c d e) -> AllOf' ts as Id -> AllOf' ts (a <| p ': as) Id
-and4 x y = And4 (Id x) y
-and5 :: (forall b c d e f. Modify5 (In ts) p b c d e f => a b c d e f) -> AllOf' ts as Id -> AllOf' ts (a <| p ': as) Id
-and5 x y = And5 (Id x) y
-and6 :: (forall b c d e f g. Modify6 (In ts) p b c d e f g => a b c d e f g) -> AllOf' ts as Id -> AllOf' ts (a <| p ': as) Id
-and6 x y = And6 (Id x) y
-none :: AllOf' ts '[] Id
-none = None
-projI :: In as a => AllOf as Id -> a
+type AllOfI as = AllOfI' as as
+type AllOfI' ts as = AllOf' ts as Id
+andI :: a -> AllOfI' ts as -> AllOfI' ts (Type a ': as)
+andI x y = And (Id x) y
+andI1 :: (forall b. Modify (In ts) p b => a b) -> AllOfI' ts as -> AllOfI' ts (a <| p ': as)
+andI1 x y = And1 (Id x) y
+andI2 :: (forall b c. Modify2 (In ts) p b c => a b c) -> AllOfI' ts as -> AllOfI' ts (a <| p ': as)
+andI2 x y = And2 (Id x) y
+andI3 :: (forall b c d. Modify3 (In ts) p b c d => a b c d) -> AllOfI' ts as -> AllOfI' ts (a <| p ': as)
+andI3 x y = And3 (Id x) y
+andI4 :: (forall b c d e. Modify4 (In ts) p b c d e => a b c d e) -> AllOfI' ts as -> AllOfI' ts (a <| p ': as)
+andI4 x y = And4 (Id x) y
+andI5 :: (forall b c d e f. Modify5 (In ts) p b c d e f => a b c d e f) -> AllOfI' ts as -> AllOfI' ts (a <| p ': as)
+andI5 x y = And5 (Id x) y
+andI6 :: (forall b c d e f g. Modify6 (In ts) p b c d e f g => a b c d e f g) -> AllOfI' ts as -> AllOfI' ts (a <| p ': as)
+andI6 x y = And6 (Id x) y
+noneI :: AllOfI' ts '[]
+noneI = None
+projI :: In as a => AllOfI as -> a
 projI = unId . proj
 
 newtype Func b a = Func {unFunc :: a -> b}
-andF :: (a -> t) -> AllOf' ts as (Func t) -> AllOf' ts (Type a ': as) (Func t)
+type AllOfF as t = AllOfF' as as t
+type AllOfF' ts as t = AllOf' ts as (Func t)
+andF :: (a -> t) -> AllOfF' ts as t -> AllOfF' ts (Type a ': as) t
 andF x y = And (Func x) y
-andF1 :: (forall b. Modify (In ts) p b => a b -> t) -> AllOf' ts as (Func t) -> AllOf' ts (a <| p ': as) (Func t)
+andF1 :: (forall b. Modify (In ts) p b => a b -> t) -> AllOfF' ts as t -> AllOfF' ts (a <| p ': as) t
 andF1 x y = And1 (Func x) y
-andF2 :: (forall b c. Modify2 (In ts) p b c => a b c -> t) -> AllOf' ts as (Func t) -> AllOf' ts (a <| p ': as) (Func t)
+andF2 :: (forall b c. Modify2 (In ts) p b c => a b c -> t) -> AllOfF' ts as t -> AllOfF' ts (a <| p ': as) t
 andF2 x y = And2 (Func x) y
-andF3 :: (forall b c d. Modify3 (In ts) p b c d => a b c d -> t) -> AllOf' ts as (Func t) -> AllOf' ts (a <| p ': as) (Func t)
+andF3 :: (forall b c d. Modify3 (In ts) p b c d => a b c d -> t) -> AllOfF' ts as t -> AllOfF' ts (a <| p ': as) t
 andF3 x y = And3 (Func x) y
-andF4 :: (forall b c d e. Modify4 (In ts) p b c d e => a b c d e -> t) -> AllOf' ts as (Func t) -> AllOf' ts (a <| p ': as) (Func t)
+andF4 :: (forall b c d e. Modify4 (In ts) p b c d e => a b c d e -> t) -> AllOfF' ts as t -> AllOfF' ts (a <| p ': as) t
 andF4 x y = And4 (Func x) y
-andF5 :: (forall b c d e f. Modify5 (In ts) p b c d e f => a b c d e f -> t) -> AllOf' ts as (Func t) -> AllOf' ts (a <| p ': as) (Func t)
+andF5 :: (forall b c d e f. Modify5 (In ts) p b c d e f => a b c d e f -> t) -> AllOfF' ts as t -> AllOfF' ts (a <| p ': as) t
 andF5 x y = And5 (Func x) y
-andF6 :: (forall b c d e f g. Modify6 (In ts) p b c d e f g => a b c d e f g -> t) -> AllOf' ts as (Func t) -> AllOf' ts (a <| p ': as) (Func t)
+andF6 :: (forall b c d e f g. Modify6 (In ts) p b c d e f g => a b c d e f g -> t) -> AllOfF' ts as t -> AllOfF' ts (a <| p ': as) t
 andF6 x y = And6 (Func x) y
-noneF :: AllOf' ts '[] (Func t)
+noneF :: AllOfF' ts '[] t
 noneF = None
-projF :: In as a => AllOf as (Func t) -> (a -> t)
+projF :: In as a => AllOfF as t -> (a -> t)
 projF = unFunc . proj
+
+infixr 0 `andI`, `andI1`, `andI2`, `andI3`, `andI4`, `andI5`, `andI6`, `andF`, `andF1`, `andF2`, `andF3`, `andF4`, `andF5`, `andF6`

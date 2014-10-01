@@ -1,7 +1,7 @@
-Cluss
+cluss
 =====
 
-Simple Alternative to Type Classes
+**simple alternative to type classes**
 
 A *cluss* enables you to achieve *function overloading*, or ad-hoc polymorphism,
 without creating a new type class.
@@ -17,4 +17,6 @@ cluss instances are *closed* and cluss methods are *open*.
 
 Clusses can easily be used in a nested way,
 and can even be *recursive*, just like recursive type classes,
-and therefore clusses are expressive enough to imitate Haskell 98's type classes.
+and therefore clusses are expressive enough to imitate Haskell-98-style type classes.
+
+The latest version is available at [https://hackage.haskell.org/package/cluss](https://hackage.haskell.org/package/cluss).

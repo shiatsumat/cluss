@@ -4,6 +4,7 @@ version: 0.1
 license: BSD3
 license-file: LICENSE
 cabal-version: >= 1.10
+tested-with: GHC==7.8.3
 author: Yusuke Matsushita
 maintainer: Yusuke Matsushita <y.skm24t@gmail.com>
 stability: provinsional
@@ -26,7 +27,7 @@ description:
     .
     Clusses can easily be used in a nested way,
     and can even be /recursive/, just like recursive type classes,
-    and therefore clusses are expressive enough to imitate Haskell 98's type classes.
+    and therefore clusses are expressive enough to imitate Haskell-98-style type classes.
     .
     More information can be found in the Haddock or the comments in the source code.
 
