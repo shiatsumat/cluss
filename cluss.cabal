@@ -35,7 +35,7 @@ build-type: Simple
 
 source-repository head
     type: git
-    location: git://github.com/Kinokkory/cluss.git
+    location: git@github.com:Kinokkory/cluss.git
 
 library
     hs-source-dirs: src
