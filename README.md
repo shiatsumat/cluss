@@ -12,8 +12,7 @@ which indicates that the type matches some of the patterns;
 which is analogous to a type class indicating that a type matches some of its "instances".
 The constraint `In [Type T, ...] a` is what we call a "cluss".
 
-Unlike type classes, whose instances are open and whose methods are closed,
-cluss instances are *closed* and cluss methods are *open*.
+Cluss instances are *closed* and cluss methods are *open*, unlike type classes, whose instances are open and whose methods are closed.
 
 Clusses can easily be used in a nested way,
 and can even be *recursive*, just like recursive type classes,
