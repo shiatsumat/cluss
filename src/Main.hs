@@ -1,5 +1,4 @@
 {-# LANGUAGE DataKinds, FlexibleContexts, TypeOperators #-}
-{-# LANGUAGE DataKinds, FlexibleContexts, TypeOperators #-}
 
 module Main(module Main) where
 
