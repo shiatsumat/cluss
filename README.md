@@ -32,6 +32,6 @@ Those properties give clusses the advantages different from type classes:
 * You can create new methods for clusses anywhere in any module,
     since cluss methods are open.
 
-More information can be found in the [hackage's haddock](http://hackage.haskell.org/package/cluss) or the [http://kinokkory.github.io/cluss/](updated haddock).
+More information can be found in the [hackage's haddock](http://hackage.haskell.org/package/cluss) or the [updated haddock](http://kinokkory.github.io/cluss/).
 
 The latest version is available at [https://hackage.haskell.org/package/cluss](https://hackage.haskell.org/package/cluss).
