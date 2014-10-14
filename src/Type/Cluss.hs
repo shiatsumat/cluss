@@ -39,11 +39,23 @@ module Type.Cluss (
     -- ** Basic Combinators
   , This, Pure, Is
 
-    -- ** Combinators for Overlaying Contraints
+    -- ** Overlaying Combinators
   , type (>+<), type (>++<), type (>+++<), type (>++++<), type (>+++++<), type (>++++++<), type (>+++++++<), type (>++++++++<), type (>+++++++++<), type (>++++++++++<)
 
-    -- ** Combinators for Bonding Contraints
+    -- ** Bonding Combinators
   , type (>|<), type (>||<), type (>|||<), type (>||||<), type (>|||||<), type (>||||||<), type (>|||||||<), type (>||||||||<), type (>|||||||||<)
+
+    -- ** Irrefutable Combinators
+    {-| @'IR1' p@, @'IR2' p@, ... and @'IR10' p@ work almost like @p@ itself,
+        but when used with 'In' or 'Has',
+        'In' or 'Has' gives up judging whether @p@ is satisfied
+        and believe that @p@ is satisfied.
+        They work a bit like irrefutable patterns in Haskell
+        and @IR@ stands for \"/I/r/R/efutable\".
+
+        They are useful when the constraint function @p@ receives a polymorphic argument
+        and the judgment depends on external contexts. -}
+  , IR1, IR2, IR3, IR4, IR5, IR6, IR7, IR8, IR9, IR10
 
     -- * Helpers
 
@@ -153,6 +165,8 @@ import GHC.Exts
 type a $ b = a b
 infixr 0 $
 
+data Proxy a = Proxy
+
 type family (a :: Bool) && (b :: Bool) :: Bool
 type instance True && True = True
 type instance True && False = False
@@ -232,12 +246,17 @@ type Denary (a :: i -> i2 -> i3 -> i4 -> i5 -> i6 -> i7 -> i8 -> i9 -> i10 -> k)
 -- There is no predetermined limit of recursion depth,
 -- but GHC has a fixed-depth recursion stack for safety,
 -- so you may need to increase the stack depth with @-fcontext-stack=N@.
-class True ~ False => This (a :: k)
+class True ~ False => This a
 -- | @'Pure' a@ is equivalent to the empty constraint @()@.
 --
 -- >Pure a == ()
-class Pure (a :: i)
+class Pure a
 instance Pure a
+
+-- |
+-- >(Is a) b == (a ~ b)
+type Is = (~)
+
 -- |
 -- >(p >+< q) a == (p a, q a)
 class (p a, q a) => (>+<) p q a
@@ -278,6 +297,7 @@ instance (p a b c d e f g h i, q a b c d e f g h i) => (>+++++++++<) p q a b c d
 -- >(p >++++++++++< q) a b c d e f g h i j == (p a b c d e f g h, q a b c d e f g h i j)
 class (p a b c d e f g h i j, q a b c d e f g h i j) => (>++++++++++<) p q a b c d e f g h i j
 instance (p a b c d e f g h i j, q a b c d e f g h i j) => (>++++++++++<) p q a b c d e f g h i j
+
 -- |
 -- >(p >|< q) a b == (p a, q b)
 class (p a, q b) => (>|<) p q a b
@@ -315,9 +335,26 @@ instance (p a b c d e f g h, q i) => (>||||||||<) p q a b c d e f g h i
 class (p a b c d e f g h i, q j) => (>|||||||||<) p q a b c d e f g h i j
 instance (p a b c d e f g h i, q j) => (>|||||||||<) p q a b c d e f g h i j
 
--- |
--- >(Is a) b == (a ~ b)
-type Is = (~)
+class p a => IR1 p a
+instance p a => IR1 p a
+class p a b => IR2 p a b
+instance p a b => IR2 p a b
+class p a b c => IR3 p a b c
+instance p a b c => IR3 p a b c
+class p a b c d => IR4 p a b c d
+instance p a b c d => IR4 p a b c d
+class p a b c d e => IR5 p a b c d e
+instance p a b c d e => IR5 p a b c d e
+class p a b c d e f => IR6 p a b c d e f
+instance p a b c d e f => IR6 p a b c d e f
+class p a b c d e f g => IR7 p a b c d e f g
+instance p a b c d e f g => IR7 p a b c d e f g
+class p a b c d e f g h => IR8 p a b c d e f g h
+instance p a b c d e f g h => IR8 p a b c d e f g h
+class p a b c d e f g h i => IR9 p a b c d e f g h i
+instance p a b c d e f g h i => IR9 p a b c d e f g h i
+class p a b c d e f g h i j => IR10 p a b c d e f g h i j
+instance p a b c d e f g h i j => IR10 p a b c d e f g h i j
 
 infixl 7 <|
 infixl 8 >|<, >||<, >|||<, >||||<, >|||||<, >||||||<, >|||||||<, >||||||||<, >|||||||||<
@@ -394,44 +431,54 @@ type family Modify10 (a :: k) (this :: k -> Constraint) (p :: i -> i2 -> i3 -> i
     Modify10 a this p = p
 
 type family Check (p :: i -> Constraint) (b :: i) :: Bool where
+    Check (IR1 p) b = True
     Check (In as) b = Has as b
     Check (p >+< q) b = Check p b && Check q b
     Check (Is b) b = True
     Check (Is b') b = False
     Check p b = True
 type family Check2 (p :: i -> i2 -> Constraint) (b :: i) (c :: i2) :: Bool where
+    Check2 (IR2 p) b c = True
     Check2 (p >++< q) b c = Check2 p b c && Check2 q b c
     Check2 (p >|< q) b c = Check p b && Check q c
     Check2 p b c = True
 type family Check3 (p :: i -> i2 -> i3 -> Constraint) (b :: i) (c :: i2) (d :: i3) :: Bool where
+    Check3 (IR3 p) b c d = True
     Check3 (p >+++< q) b c d = Check3 p b c d && Check3 q b c d
     Check3 (p >||< q) b c d = Check2 p b c && Check q d
     Check3 p b c d = True
 type family Check4 (p :: i -> i2 -> i3 -> i4 -> Constraint) (b :: i) (c :: i2) (d :: i3) (e :: i4) :: Bool where
+    Check4 (IR4 p) b c d e = True
     Check4 (p >++++< q) b c d e = Check4 p b c d e && Check4 q b c d e
     Check4 (p >|||< q) b c d e = Check3 p b c d && Check q e
     Check4 p b c d e = True
 type family Check5 (p :: i -> i2 -> i3 -> i4 -> i5 -> Constraint) (b :: i) (c :: i2) (d :: i3) (e :: i4) (f :: i5) :: Bool where
+    Check5 (IR5 p) b c d e f = True
     Check5 (p >+++++< q) b c d e f = Check5 p b c d e f && Check5 q b c d e f
     Check5 (p >||||< q) b c d e f = Check4 p b c d e && Check q f
     Check5 p b c d e f = True
 type family Check6 (p :: i -> i2 -> i3 -> i4 -> i5 -> i6 -> Constraint) (b :: i) (c :: i2) (d :: i3) (e :: i4) (f :: i5) (g :: i6) :: Bool where
+    Check6 (IR6 p) b c d e f g = True
     Check6 (p >++++++< q) b c d e f g = Check6 p b c d e f g && Check6 q b c d e f g
     Check6 (p >|||||< q) b c d e f g = Check5 p b c d e f && Check q g
     Check6 p b c d e f g = True
 type family Check7 (p :: i -> i2 -> i3 -> i4 -> i5 -> i6 -> i7 -> Constraint) (b :: i) (c :: i2) (d :: i3) (e :: i4) (f :: i5) (g :: i6) (h :: i7) :: Bool where
+    Check7 (IR7 p) b c d e f g h = True
     Check7 (p >+++++++< q) b c d e f g h = Check7 p b c d e f g h && Check7 q b c d e f g h
     Check7 (p >||||||< q) b c d e f g h = Check6 p b c d e f g && Check q h
     Check7 p b c d e f g h = True
 type family Check8 (p :: i -> i2 -> i3 -> i4 -> i5 -> i6 -> i7 -> i8 -> Constraint) (b :: i) (c :: i2) (d :: i3) (e :: i4) (f :: i5) (g :: i6) (h :: i7) (i' :: i8) :: Bool where
+    Check8 (IR8 p) b c d e f g h i = True
     Check8 (p >++++++++< q) b c d e f g h i = Check8 p b c d e f g h i && Check8 q b c d e f g h i
     Check8 (p >|||||||< q) b c d e f g h i = Check7 p b c d e f g h && Check q i
     Check8 p b c d e f g h i = True
 type family Check9 (p :: i -> i2 -> i3 -> i4 -> i5 -> i6 -> i7 -> i8 -> i9 -> Constraint) (b :: i) (c :: i2) (d :: i3) (e :: i4) (f :: i5) (g :: i6) (h :: i7) (i' :: i8) (j :: i9) :: Bool where
+    Check9 (IR9 p) b c d e f g h i j = True
     Check9 (p >+++++++++< q) b c d e f g h i j = Check9 p b c d e f g h i j && Check9 q b c d e f g h i j
     Check9 (p >||||||||< q) b c d e f g h i j = Check8 p b c d e f g h i && Check q j
     Check9 p b c d e f g h i j = True
 type family Check10 (p :: i -> i2 -> i3 -> i4 -> i5 -> i6 -> i7 -> i8 -> i9 -> i10 -> Constraint) (b :: i) (c :: i2) (d :: i3) (e :: i4) (f :: i5) (g :: i6) (h :: i7) (i' :: i8) (j :: i9) (k' :: i10) :: Bool where
+    Check10 (IR10 p) b c d e f g h i j k = True
     Check10 (p >++++++++++< q) b c d e f g h i j k = Check10 p b c d e f g h i j k && Check10 q b c d e f g h i j k
     Check10 (p >|||||||||< q) b c d e f g h i j k = Check9 p b c d e f g h i j && Check q k
     Check10 p b c d e f g h i j k = True
@@ -478,9 +525,9 @@ infixr 0 `And`, `AndAny`, `And1`, `And2`, `And3`, `And4`, `And5`, `And6`, `And7`
 class In (as :: [*]) (a :: k) where
     proj :: AllOf as t -> t a
 instance In' (Where as as a) as as a => In as a where
-    proj = proj' (undefined :: Where as as a)
+    proj = proj' (Proxy :: Proxy $ Where as as a)
 class In' (n :: *) (ts :: [*]) (as :: [*]) (a :: k) where
-    proj' :: n -> AllOf' ts as t -> t a
+    proj' :: Proxy n -> AllOf' ts as t -> t a
 instance In' Look_At_Head ts (Type a ': as) a where
     proj' _ (And x _) = x
 instance p a => In' Look_At_Head ts (AnyType p ': as) a where
@@ -506,29 +553,29 @@ instance Modify9 (a b c d e f g h i j) (In ts) p b c d e f g h i j => In' Look_A
 instance Modify10 (a b c d e f g h i j k) (In ts) p b c d e f g h i j k => In' Look_At_Head ts (Denary a p ': as) (a b c d e f g h i j k) where
     proj' _ (And10 x _) = x
 instance In' n ts as a => In' (Look_At_Tail n) ts (Type (b :: k) ': as) (a :: k) where
-    proj' _ (And _ xs) = proj' (undefined :: n) xs
+    proj' _ (And _ xs) = proj' (Proxy :: Proxy n) xs
 instance In' n ts as a => In' (Look_At_Tail n) ts (AnyType (p :: k -> Constraint) ': as) (a :: k) where
-    proj' _ (AndAny _ xs) = proj' (undefined :: n) xs
+    proj' _ (AndAny _ xs) = proj' (Proxy :: Proxy n) xs
 instance In' n ts as a => In' (Look_At_Tail n) ts (Unary (b :: i -> k) (p :: i -> Constraint) ': as) (a :: k) where
-    proj' _ (And1 _ xs) = proj' (undefined :: n) xs
+    proj' _ (And1 _ xs) = proj' (Proxy :: Proxy n) xs
 instance In' n ts as a => In' (Look_At_Tail n) ts (Binary (b :: i -> i2 -> k) (p :: i -> i2 -> Constraint) ': as) (a :: k) where
-    proj' _ (And2 _ xs) = proj' (undefined :: n) xs
+    proj' _ (And2 _ xs) = proj' (Proxy :: Proxy n) xs
 instance In' n ts as a => In' (Look_At_Tail n) ts (Ternary (b :: i -> i2 -> i3 -> k) (p :: i -> i2 -> i3 -> Constraint) ': as) (a :: k) where
-    proj' _ (And3 _ xs) = proj' (undefined :: n) xs
+    proj' _ (And3 _ xs) = proj' (Proxy :: Proxy n) xs
 instance In' n ts as a => In' (Look_At_Tail n) ts (Quaternary (b :: i -> i2 -> i3 -> i4 -> k) (p :: i -> i2 -> i3 -> i4 -> Constraint) ': as) (a :: k) where
-    proj' _ (And4 _ xs) = proj' (undefined :: n) xs
+    proj' _ (And4 _ xs) = proj' (Proxy :: Proxy n) xs
 instance In' n ts as a => In' (Look_At_Tail n) ts (Quinary (b :: i -> i2 -> i3 -> i4 -> i5 -> k) (p :: i -> i2 -> i3 -> i4 -> i5 -> Constraint) ': as) (a :: k) where
-    proj' _ (And5 _ xs) = proj' (undefined :: n) xs
+    proj' _ (And5 _ xs) = proj' (Proxy :: Proxy n) xs
 instance In' n ts as a => In' (Look_At_Tail n) ts (Senary (b :: i -> i2 -> i3 -> i4 -> i5 -> i6 -> k) (p :: i -> i2 -> i3 -> i4 -> i5 -> i6 -> Constraint) ': as) (a :: k) where
-    proj' _ (And6 _ xs) = proj' (undefined :: n) xs
+    proj' _ (And6 _ xs) = proj' (Proxy :: Proxy n) xs
 instance In' n ts as a => In' (Look_At_Tail n) ts (Septenary (b :: i -> i2 -> i3 -> i4 -> i5 -> i6 -> i7 -> k) (p :: i -> i2 -> i3 -> i4 -> i5 -> i6 -> i7 -> Constraint) ': as) (a :: k) where
-    proj' _ (And7 _ xs) = proj' (undefined :: n) xs
+    proj' _ (And7 _ xs) = proj' (Proxy :: Proxy n) xs
 instance In' n ts as a => In' (Look_At_Tail n) ts (Octary (b :: i -> i2 -> i3 -> i4 -> i5 -> i6 -> i7 -> i8 -> k) (p :: i -> i2 -> i3 -> i4 -> i5 -> i6 -> i7 -> i8 -> Constraint) ': as) (a :: k) where
-    proj' _ (And8 _ xs) = proj' (undefined :: n) xs
+    proj' _ (And8 _ xs) = proj' (Proxy :: Proxy n) xs
 instance In' n ts as a => In' (Look_At_Tail n) ts (Nonary (b :: i -> i2 -> i3 -> i4 -> i5 -> i6 -> i7 -> i8 -> i9 -> k) (p :: i -> i2 -> i3 -> i4 -> i5 -> i6 -> i7 -> i8 -> i9 -> Constraint) ': as) (a :: k) where
-    proj' _ (And9 _ xs) = proj' (undefined :: n) xs
+    proj' _ (And9 _ xs) = proj' (Proxy :: Proxy n) xs
 instance In' n ts as a => In' (Look_At_Tail n) ts (Denary (b :: i -> i2 -> i3 -> i4 -> i5 -> i6 -> i7 -> i8 -> i9 -> i10 -> k) (p :: i -> i2 -> i3 -> i4 -> i5 -> i6 -> i7 -> i8 -> i9 -> i10 -> Constraint) ': as) (a :: k) where
-    proj' _ (And10 _ xs) = proj' (undefined :: n) xs
+    proj' _ (And10 _ xs) = proj' (Proxy :: Proxy n) xs
 
 newtype Id a = Id {unId :: a}
 type AllOfI as = AllOfI' as as
